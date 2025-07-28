@@ -1,8 +1,8 @@
 import pandas as pd
 from datetime import datetime
 import os
-from openpyxl import Workbook, load_workbook
-from openpyxl.utils import get_column_letter
+from openpyxl import load_workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 def load_config(file_path):
     """Load configuration file into DataFrame"""
@@ -62,47 +62,33 @@ def get_job_info(job_df, job_name):
         )
     return ("N/A", "N/A", "N/A")
 
-def save_to_time_report(data_list, file_path='Time_report.xlsm', sheet_name='Raw Data'):
-    """Ghi danh sách dữ liệu vào sheet Raw Data trong Time_report.xlsm."""
+def save_to_time_report(entries, report_path="Time_report.xlsm"):
+    """
+    Save list of work hour entries into an existing Time_report.xlsm file.
+    Automatically appends new data into the sheet 'Raw_Data'.
+    """
+    if not os.path.exists(report_path):
+        raise FileNotFoundError(f"File {report_path} chưa tồn tại. Hãy tạo trước hoặc upload lên app.")
 
-    columns = [
-        "Date", "Project Name", "Project Code", "Job Name", "Job Code",
-        "Employee", "Employee ID", "Team", "Workcenter", "Task", "Hours"
-    ]
+    # Convert list of dict to DataFrame
+    df = pd.DataFrame(entries)
 
-    # Kiểm tra file đã tồn tại chưa
-    file_exists = os.path.exists(file_path)
+    # Load the existing Excel workbook
+    wb = load_workbook(report_path, keep_vba=True)  # Giữ macro
 
-    # Nếu chưa có thì tạo mới và thêm header
-    if not file_exists:
-        wb = Workbook()
-        ws = wb.active
-        ws.title = sheet_name
-        ws.append(columns)
-        wb.save(file_path)
-
-    # Mở file (keep_vba=True nếu có macro)
-    try:
-        wb = load_workbook(file_path, keep_vba=True)
-    except:
-        wb = load_workbook(file_path)
-
-    # Lấy hoặc tạo sheet
-    if sheet_name not in wb.sheetnames:
-        ws = wb.create_sheet(title=sheet_name)
-        ws.append(columns)
+    # If 'Raw_Data' sheet doesn't exist, create it
+    if 'Raw_Data' not in wb.sheetnames:
+        ws = wb.create_sheet("Raw_Data")
+        ws.append(df.columns.tolist())
     else:
-        ws = wb[sheet_name]
+        ws = wb["Raw_Data"]
 
-    # Tìm dòng đầu tiên trống
-    next_row = ws.max_row + 1
-    if all([cell.value is None for cell in ws[next_row - 1]]):
-        next_row -= 1
+    # Find the first empty row (sau cùng)
+    start_row = ws.max_row + 1 if ws.max_row > 1 else 2
 
-    # Ghi từng dòng dữ liệu
-    for entry in data_list:
-        row_data = [entry.get(col, "") for col in columns]
-        ws.append(row_data)
+    # Append new data
+    for row in dataframe_to_rows(df, index=False, header=False):
+        ws.append(row)
 
-    wb.save(file_path)
-    return file_path
+    # Save the workbook back (macro-safe)
+    wb.save(report_path)
