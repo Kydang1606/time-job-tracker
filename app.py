@@ -14,9 +14,9 @@ st.title("📊 Project Time Comparison")
 # --- Load Configs ---
 with st.sidebar:
     st.header("🛠️ Configuration")
-    project_df = load_excel_config("sample_configs/Project_Config.xlsx")
-    team_df = load_excel_config("sample_configs/Team_Config.xlsx")
-    job_df = load_excel_config("sample_configs/Job_Config.xlsx")
+    project_df = load_excel_config("Project_Config.xlsx")
+    team_df = load_excel_config("Team_Config.xlsx")
+    job_df = load_excel_config("Job_Config.xlsx")
 
     mode = st.radio("Select Comparison Mode", ["Compare Projects in a Month", "Compare Projects Over Time"])
 
