@@ -14,7 +14,7 @@ with st.form("entry_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
         selected_date = st.date_input("📅 Work Date", value=date.today())
-        selected_person = st.selectbox("👤 Person", get_team_list(team_df))
+        selected_person = st.selectbox("👤 Group Leader", get_team_list(team_df))
     with col2:
         selected_project = st.selectbox("🏗️ Project", get_project_list(project_df))
         selected_job = st.selectbox("🔧 Job", get_job_list(job_df, selected_project))
