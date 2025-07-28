@@ -1,27 +1,36 @@
 import streamlit as st
 from datetime import date
-import pandas as pd
-from utils import save_to_time_report
+from utils import (
+    load_config,
+    get_team_list,
+    get_team_members,
+    get_project_list,
+    get_job_list,
+    get_employee_id,
+    get_project_code,
+    get_job_info,
+    save_to_time_report
+)
 
-# Load config
+# Load config files
 project_df = load_config("Project_Config.xlsx")
 job_df = load_config("Job_Config.xlsx")
 team_df = load_config("Team_Config.xlsx")
 
-# Set page layout
+# Page layout
 st.set_page_config(page_title="Daily Work Entry", layout="wide")
 st.title("📋 Daily Work Hour Entry")
 
-# 1. Ngày làm việc & nhóm trưởng
+# Select working date and team leader
 col1, col2 = st.columns(2)
 with col1:
     selected_date = st.date_input("📅 Ngày làm việc", value=date.today())
 with col2:
     selected_leader = st.selectbox("👤 Nhóm trưởng", get_team_list(team_df))
 
+# Show form if team leader is selected
 if selected_leader:
     members = get_team_members(team_df, selected_leader)
-
     st.markdown(f"### 👥 Thành viên trong nhóm **{selected_leader}**")
     submitted = False
 
@@ -68,7 +77,6 @@ if selected_leader:
     if submitted:
         if member_entries:
             save_to_time_report(member_entries)
-            st.success("✅ Dữ liệu đã được lưu thành công!")
+            st.success("✅ Dữ liệu đã được lưu thành công vào Time_report.xlsm!")
         else:
             st.warning("⚠️ Không có thành viên nào được chọn là 'Có mặt'.")
-
