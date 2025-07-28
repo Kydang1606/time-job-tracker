@@ -1,28 +1,28 @@
-# utils.py
-import streamlit as st
 import pandas as pd
 from datetime import datetime
+import os
 
-@st.cache_data
-def load_excel_config(file_path):
+def load_config(file_path):
+    """Load configuration file into DataFrame"""
     return pd.read_excel(file_path)
 
-def save_time_entry(employee, project, job, date, hours):
-    new_entry = {
-        "Employee": employee,
-        "Project": project,
-        "Job": job,
-        "Date": date.strftime("%Y-%m-%d"),
-        "Hours": hours
-    }
+def get_project_list(project_df):
+    return project_df['Project Name'].dropna().unique().tolist()
 
-    if "time_entries" not in st.session_state:
-        st.session_state["time_entries"] = []
+def get_job_list(job_df, selected_project):
+    return job_df[job_df['Project Name'] == selected_project]['Job Name'].dropna().unique().tolist()
 
-    st.session_state["time_entries"].append(new_entry)
+def get_team_list(team_df):
+    return team_df['Person'].dropna().unique().tolist()
 
-def get_all_entries():
-    if "time_entries" in st.session_state:
-        return pd.DataFrame(st.session_state["time_entries"])
+def save_daily_log(log_data, save_path='Daily_Log.xlsx'):
+    df_new = pd.DataFrame([log_data])
+
+    if os.path.exists(save_path):
+        df_existing = pd.read_excel(save_path)
+        df_combined = pd.concat([df_existing, df_new], ignore_index=True)
     else:
-        return pd.DataFrame(columns=["Employee", "Project", "Job", "Date", "Hours"])
+        df_combined = df_new
+
+    df_combined.to_excel(save_path, index=False)
+    return save_path
