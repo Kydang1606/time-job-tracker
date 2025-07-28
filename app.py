@@ -1,37 +1,84 @@
 import streamlit as st
 from datetime import date
-from utils import load_config, get_project_list, get_job_list, get_team_list, save_daily_log
+import pandas as pd
+from utils import (
+    load_config,
+    get_project_list,
+    get_job_list,
+    get_team_list,
+    get_team_members,
+    get_employee_id,
+    get_project_code,
+    get_job_info,
+    save_bulk_log,
+)
 
-# Load configuration files
+# Load config
 project_df = load_config("Project_Config.xlsx")
 job_df = load_config("Job_Config.xlsx")
 team_df = load_config("Team_Config.xlsx")
 
-st.set_page_config(page_title="Daily Work Entry", layout="centered")
+# Set page layout
+st.set_page_config(page_title="Daily Work Entry", layout="wide")
 st.title("📋 Daily Work Hour Entry")
 
-with st.form("entry_form", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_date = st.date_input("📅 Work Date", value=date.today())
-        selected_person = st.selectbox("👤 Group Leader", get_team_list(team_df))
-    with col2:
-        selected_project = st.selectbox("🏗️ Project", get_project_list(project_df))
-        selected_job = st.selectbox("🔧 Job", get_job_list(job_df, selected_project))
+# 1. Ngày làm việc & nhóm trưởng
+col1, col2 = st.columns(2)
+with col1:
+    selected_date = st.date_input("📅 Ngày làm việc", value=date.today())
+with col2:
+    selected_leader = st.selectbox("👤 Nhóm trưởng", get_team_list(team_df))
 
-    hours_worked = st.number_input("⏱️ Hours Worked", min_value=0.0, max_value=24.0, step=0.5)
-    remarks = st.text_area("📝 Remarks (optional)", height=100)
+if selected_leader:
+    members = get_team_members(team_df, selected_leader)
 
-    submitted = st.form_submit_button("✅ Submit Entry")
+    st.markdown(f"### 👥 Thành viên trong nhóm **{selected_leader}**")
+    submitted = False
+
+    with st.form("entry_form", clear_on_submit=True):
+        member_entries = []
+
+        for member in members:
+            st.markdown(f"#### 👤 {member}")
+            col1, col2, col3, col4 = st.columns([1, 1, 2, 2])
+            with col1:
+                present = st.checkbox("Có mặt", key=f"{member}_present")
+            with col2:
+                hours = st.number_input("Giờ làm", 0.0, 24.0, 8.0, 0.5, key=f"{member}_hours")
+            with col3:
+                selected_project = st.selectbox(
+                    "Dự án", get_project_list(project_df), key=f"{member}_project"
+                )
+            with col4:
+                selected_job = st.selectbox(
+                    "Công việc", get_job_list(job_df, selected_project), key=f"{member}_job"
+                )
+
+            if present:
+                emp_id = get_employee_id(team_df, member)
+                proj_code = get_project_code(project_df, selected_project)
+                job_code, workcenter, task = get_job_info(job_df, selected_job)
+
+                member_entries.append({
+                    "Date": selected_date,
+                    "Project Name": selected_project,
+                    "Project Code": proj_code,
+                    "Job Name": selected_job,
+                    "Job Code": job_code,
+                    "Employee": member,
+                    "Employee ID": emp_id,
+                    "Team": selected_leader,
+                    "Workcenter": workcenter,
+                    "Task": task,
+                    "Hours": hours,
+                })
+
+        submitted = st.form_submit_button("✅ Gửi dữ liệu")
 
     if submitted:
-        log_data = {
-            "Date": selected_date,
-            "Group Leader": selected_person,
-            "Project": selected_project,
-            "Job": selected_job,
-            "Hours": hours_worked,
-            "Remarks": remarks
-        }
-        output_path = save_daily_log(log_data)
-        st.success(f"Entry saved successfully to `{output_path}` ✅")
+        if member_entries:
+            save_bulk_log(member_entries)
+            st.success("✅ Dữ liệu đã được lưu thành công!")
+        else:
+            st.warning("⚠️ Không có thành viên nào được chọn là 'Có mặt'.")
+
