@@ -18,8 +18,8 @@ job_df = load_job_config()
 # Chọn ngày làm việc
 selected_date = st.date_input("🗓️ Ngày làm việc", value=datetime.today())
 
-# Chọn nhóm trưởng
-team_leaders = team_df['Nhóm trưởng'].dropna().unique().tolist()
+# Chọn nhóm trưởng (đúng cột là 'Group Leader')
+team_leaders = team_df['Group Leader'].dropna().unique().tolist()
 selected_leader = st.selectbox("👤 Chọn nhóm trưởng", team_leaders)
 
 if selected_leader:
