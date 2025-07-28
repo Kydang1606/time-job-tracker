@@ -1,40 +1,37 @@
-# app.py
 import streamlit as st
-import pandas as pd
-from utils import (
-    load_excel_config,
-    save_time_entry,
-    get_all_entries
-)
+from datetime import date
+from utils import load_config, get_project_list, get_job_list, get_team_list, save_daily_log
 
-st.set_page_config(page_title="Nhập dữ liệu thời gian làm việc", layout="wide")
-st.title("📝 Nhập dữ liệu thời gian làm việc")
+# Load configuration files
+project_df = load_config("Project_Config.xlsx")
+job_df = load_config("Job_Config.xlsx")
+team_df = load_config("Team_Config.xlsx")
 
-# --- Load configs ---
-project_df = load_excel_config("Project_Config.xlsx")
-team_df = load_excel_config("Team_Config.xlsx")
-job_df = load_excel_config("Job_Config.xlsx")
+st.set_page_config(page_title="Daily Work Entry", layout="centered")
+st.title("📋 Daily Work Hour Entry")
 
-# --- Form nhập liệu ---
-with st.form("time_entry_form"):
-    st.subheader("➕ Nhập thông tin thời gian làm việc")
+with st.form("entry_form", clear_on_submit=True):
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_date = st.date_input("📅 Work Date", value=date.today())
+        selected_person = st.selectbox("👤 Person", get_team_list(team_df))
+    with col2:
+        selected_project = st.selectbox("🏗️ Project", get_project_list(project_df))
+        selected_job = st.selectbox("🔧 Job", get_job_list(job_df, selected_project))
 
-    employee = st.selectbox("👤 Nhân viên", team_df["Employee"].unique())
-    project = st.selectbox("📁 Dự án", project_df["Project"].unique())
-    job = st.selectbox("🧩 Công việc", job_df["Job"].unique())
-    work_date = st.date_input("📅 Ngày làm việc")
-    hours = st.number_input("⏱️ Số giờ làm", min_value=0.0, step=0.5)
+    hours_worked = st.number_input("⏱️ Hours Worked", min_value=0.0, max_value=24.0, step=0.5)
+    remarks = st.text_area("📝 Remarks (optional)", height=100)
 
-    submitted = st.form_submit_button("💾 Lưu dữ liệu")
+    submitted = st.form_submit_button("✅ Submit Entry")
 
     if submitted:
-        save_time_entry(employee, project, job, work_date, hours)
-        st.success("✅ Dữ liệu đã được lưu thành công.")
-
-# --- Hiển thị dữ liệu đã nhập ---
-st.subheader("📋 Dữ liệu đã nhập")
-entries_df = get_all_entries()
-if not entries_df.empty:
-    st.dataframe(entries_df)
-else:
-    st.info("Chưa có dữ liệu.")
+        log_data = {
+            "Date": selected_date,
+            "Person": selected_person,
+            "Project": selected_project,
+            "Job": selected_job,
+            "Hours": hours_worked,
+            "Remarks": remarks
+        }
+        output_path = save_daily_log(log_data)
+        st.success(f"Entry saved successfully to `{output_path}` ✅")
