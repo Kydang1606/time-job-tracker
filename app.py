@@ -1,17 +1,7 @@
 import streamlit as st
 from datetime import date
 import pandas as pd
-from utils import (
-    load_config,
-    get_project_list,
-    get_job_list,
-    get_team_list,
-    get_team_members,
-    get_employee_id,
-    get_project_code,
-    get_job_info,
-    save_bulk_log,
-)
+from utils import save_to_time_report
 
 # Load config
 project_df = load_config("Project_Config.xlsx")
@@ -77,7 +67,7 @@ if selected_leader:
 
     if submitted:
         if member_entries:
-            save_bulk_log(member_entries)
+            save_to_time_report(member_entries)
             st.success("✅ Dữ liệu đã được lưu thành công!")
         else:
             st.warning("⚠️ Không có thành viên nào được chọn là 'Có mặt'.")
