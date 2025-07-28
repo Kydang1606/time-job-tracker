@@ -62,33 +62,36 @@ def get_job_info(job_df, job_name):
         )
     return ("N/A", "N/A", "N/A")
 
-def save_to_time_report(entries, report_path="Time_report.xlsm"):
+def save_to_time_report(entries, uploaded_file):
     """
-    Save list of work hour entries into an existing Time_report.xlsm file.
-    Automatically appends new data into the sheet 'Raw_Data'.
+    Save work hour entries to the uploaded Time_report.xlsm file (uploaded via Streamlit).
+    Writes to the 'Raw_Data' sheet. Returns a BytesIO Excel file after update.
     """
-    if not os.path.exists(report_path):
-        raise FileNotFoundError(f"File {report_path} chưa tồn tại. Hãy tạo trước hoặc upload lên app.")
+    if uploaded_file is None:
+        raise ValueError("Chưa upload file Time_report.xlsm.")
 
     # Convert list of dict to DataFrame
     df = pd.DataFrame(entries)
 
-    # Load the existing Excel workbook
-    wb = load_workbook(report_path, keep_vba=True)  # Giữ macro
+    # Đọc nội dung file upload vào memory buffer
+    in_memory = BytesIO(uploaded_file.read())
 
-    # If 'Raw_Data' sheet doesn't exist, create it
+    # Load workbook từ memory, giữ macro
+    wb = load_workbook(filename=in_memory, keep_vba=True)
+
+    # Nếu chưa có sheet 'Raw_Data' thì tạo mới
     if 'Raw_Data' not in wb.sheetnames:
         ws = wb.create_sheet("Raw_Data")
         ws.append(df.columns.tolist())
     else:
         ws = wb["Raw_Data"]
 
-    # Find the first empty row (sau cùng)
-    start_row = ws.max_row + 1 if ws.max_row > 1 else 2
-
-    # Append new data
+    # Append vào cuối sheet
     for row in dataframe_to_rows(df, index=False, header=False):
         ws.append(row)
 
-    # Save the workbook back (macro-safe)
-    wb.save(report_path)
+    # Save lại workbook vào memory buffer mới
+    out_memory = BytesIO()
+    wb.save(out_memory)
+    out_memory.seek(0)
+    return out_memory  # trả về file để cho phép user tải xuống
