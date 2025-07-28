@@ -69,39 +69,33 @@ def save_to_time_report(data_list, file_path='Time_report.xlsm', sheet_name='Raw
         "Employee", "Employee ID", "Team", "Workcenter", "Task", "Hours"
     ]
 
-    # 1. Tạo file nếu chưa tồn tại
-    if not os.path.exists(file_path):
+    file_exists = os.path.exists(file_path)
+
+    # 1. Tạo file nếu chưa có
+    if not file_exists:
         wb = Workbook()
         ws = wb.active
         ws.title = sheet_name
-        # Ghi header
-        for col_idx, col_name in enumerate(columns, start=1):
-            ws.cell(row=1, column=col_idx, value=col_name)
+        ws.append(columns)
         wb.save(file_path)
 
-    # 2. Mở workbook có hỗ trợ VBA
-    wb = load_workbook(file_path, keep_vba=True)
-    
+    # 2. Mở file (dùng keep_vba=True nếu đã tồn tại và có macro)
+    try:
+        wb = load_workbook(file_path, keep_vba=True)
+    except:
+        wb = load_workbook(file_path)
+
     # 3. Tạo sheet nếu chưa có
     if sheet_name not in wb.sheetnames:
         ws = wb.create_sheet(title=sheet_name)
-        for col_idx, col_name in enumerate(columns, start=1):
-            ws.cell(row=1, column=col_idx, value=col_name)
+        ws.append(columns)
     else:
         ws = wb[sheet_name]
 
-    # 4. Tìm dòng trống đầu tiên
-    first_empty_row = ws.max_row + 1
-    if all([cell.value is None for cell in ws[first_empty_row - 1]]):
-        first_empty_row -= 1
-
-    # 5. Ghi dữ liệu
+    # 4. Ghi dữ liệu
     for entry in data_list:
-        for col_idx, col_name in enumerate(columns, start=1):
-            value = entry.get(col_name, "")
-            ws.cell(row=first_empty_row, column=col_idx, value=value)
-        first_empty_row += 1
+        ws.append([entry.get(col, "") for col in columns])
 
-    # 6. Lưu file
+    # 5. Lưu
     wb.save(file_path)
     return file_path
