@@ -63,15 +63,17 @@ def get_job_info(job_df, job_name):
     return ("N/A", "N/A", "N/A")
 
 def save_to_time_report(data_list, file_path='Time_report.xlsm', sheet_name='Raw Data'):
-    """Ghi danh sách dữ liệu vào sheet Raw Data của Time_report.xlsm, tự tạo nếu chưa có"""
+    """Ghi danh sách dữ liệu vào sheet Raw Data trong Time_report.xlsm."""
+
     columns = [
         "Date", "Project Name", "Project Code", "Job Name", "Job Code",
         "Employee", "Employee ID", "Team", "Workcenter", "Task", "Hours"
     ]
 
+    # Kiểm tra file đã tồn tại chưa
     file_exists = os.path.exists(file_path)
 
-    # 1. Tạo file nếu chưa có
+    # Nếu chưa có thì tạo mới và thêm header
     if not file_exists:
         wb = Workbook()
         ws = wb.active
@@ -79,23 +81,28 @@ def save_to_time_report(data_list, file_path='Time_report.xlsm', sheet_name='Raw
         ws.append(columns)
         wb.save(file_path)
 
-    # 2. Mở file (dùng keep_vba=True nếu đã tồn tại và có macro)
+    # Mở file (keep_vba=True nếu có macro)
     try:
         wb = load_workbook(file_path, keep_vba=True)
     except:
         wb = load_workbook(file_path)
 
-    # 3. Tạo sheet nếu chưa có
+    # Lấy hoặc tạo sheet
     if sheet_name not in wb.sheetnames:
         ws = wb.create_sheet(title=sheet_name)
         ws.append(columns)
     else:
         ws = wb[sheet_name]
 
-    # 4. Ghi dữ liệu
-    for entry in data_list:
-        ws.append([entry.get(col, "") for col in columns])
+    # Tìm dòng đầu tiên trống
+    next_row = ws.max_row + 1
+    if all([cell.value is None for cell in ws[next_row - 1]]):
+        next_row -= 1
 
-    # 5. Lưu
+    # Ghi từng dòng dữ liệu
+    for entry in data_list:
+        row_data = [entry.get(col, "") for col in columns]
+        ws.append(row_data)
+
     wb.save(file_path)
     return file_path
