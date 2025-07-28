@@ -1,57 +1,39 @@
-# utils.py
-import pandas as pd
 import streamlit as st
-import seaborn as sns
-import matplotlib.pyplot as plt
+import pandas as pd
+from datetime import datetime
+from utils import load_team_config, load_project_config, load_job_config, get_team_members, append_to_time_report
 
-def load_excel_config(filepath):
-    try:
-        return pd.read_excel(filepath)
-    except Exception as e:
-        st.error(f"❌ Error loading config file {filepath}: {e}")
-        return pd.DataFrame()
+st.set_page_config(page_title="Nhập dữ liệu thời gian làm việc", layout="wide")
+st.title("📝 Nhập dữ liệu thời gian làm việc")
 
-def filter_data_by_config(mode, project_df, team_df, job_df):
-    if mode == "Compare Projects in a Month":
-        selected_month = st.selectbox("Select Month", sorted(project_df['Month'].dropna().unique()))
-        selected_projects = st.multiselect("Select Projects", sorted(project_df['Project'].dropna().unique()))
-        if selected_month and selected_projects:
-            return {
-                "month": selected_month,
-                "projects": selected_projects
-            }
-    elif mode == "Compare Projects Over Time":
-        selected_years = st.multiselect("Select Year(s)", sorted(project_df['Year'].dropna().unique()))
-        selected_projects = st.multiselect("Select Projects", sorted(project_df['Project'].dropna().unique()))
-        if selected_years and selected_projects:
-            return {
-                "years": selected_years,
-                "projects": selected_projects
-            }
-    return None
+# Load configs
+team_df = load_team_config("Team_Config.xlsx")
+project_df = load_project_config("Project_Config.xlsx")
+job_df = load_job_config("Job_Config.xlsx")
 
-def show_comparison_chart(df, config, mode):
-    if mode == "Compare Projects in a Month":
-        month = config['month']
-        projects = config['projects']
-        filtered = df[(df['Month'] == month) & (df['Project'].isin(projects))]
-        summary = filtered.groupby('Project')['Hours'].sum().reset_index()
-    else:
-        years = config['years']
-        projects = config['projects']
-        filtered = df[(df['Year'].isin(years)) & (df['Project'].isin(projects))]
-        summary = filtered.groupby(['Year', 'Project'])['Hours'].sum().reset_index()
+selected_date = st.date_input("🗓️ Ngày làm việc", value=datetime.today())
+team_leaders = team_df['Group Leader'].dropna().unique().tolist()
+selected_leader = st.selectbox("👤 Chọn nhóm trưởng", team_leaders)
 
-    if summary.empty:
-        st.warning("No data matches your filter.")
-        return
-
-    fig = plt.figure(figsize=(10, 5))
-    if mode == "Compare Projects in a Month":
-        sns.barplot(data=summary, x='Project', y='Hours')
-        plt.title(f'Project Hours in {month}')
-    else:
-        sns.barplot(data=summary, x='Year', y='Hours', hue='Project')
-        plt.title(f'Project Hours Over Time')
-
-    st.pyplot(fig)
+if selected_leader:
+    members = get_team_members(team_df, selected_leader)
+    with st.form("data_entry_form", clear_on_submit=True):
+        rows = []
+        for member in members:
+            st.subheader(f"🧑‍💼 {member}")
+            project = st.selectbox("• Dự án", project_df['Project'], key=f"proj_{member}")
+            job = st.selectbox("• Công việc", job_df['Job'], key=f"job_{member}")
+            hours = st.number_input("• Giờ làm", 0.0, 24.0, 8.0, 0.5, key=f"hours_{member}")
+            rows.append({
+                "Ngày làm": selected_date,
+                "Nhóm trưởng": selected_leader,
+                "Tên nhân sự": member,
+                "Dự án": project,
+                "Công việc": job,
+                "Số giờ": hours
+            })
+        submitted = st.form_submit_button("📥 Ghi dữ liệu")
+        if submitted:
+            df = pd.DataFrame(rows)
+            append_to_time_report(df)
+            st.success("✅ Dữ liệu đã được ghi vào báo cáo!")
