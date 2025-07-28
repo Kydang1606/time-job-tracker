@@ -10,7 +10,7 @@ def get_project_list(project_df):
     return project_df['Project Name'].dropna().unique().tolist()
 
 def get_job_list(job_df, selected_project):
-    return job_df[job_df['Project Name'] == selected_project]['Job Name'].dropna().unique().tolist()
+    return job_df[job_df['Project Code'] == selected_project]['Job Name'].dropna().unique().tolist()
 
 def get_team_list(team_df):
     return team_df['Group Leader'].dropna().unique().tolist()
