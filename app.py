@@ -27,7 +27,7 @@ with st.form("entry_form", clear_on_submit=True):
     if submitted:
         log_data = {
             "Date": selected_date,
-            "Person": selected_person,
+            "Group Leader": selected_person,
             "Project": selected_project,
             "Job": selected_job,
             "Hours": hours_worked,
