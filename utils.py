@@ -1,6 +1,8 @@
 import pandas as pd
 from datetime import datetime
 import os
+from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
 
 def load_config(file_path):
     """Load configuration file into DataFrame"""
@@ -60,36 +62,46 @@ def get_job_info(job_df, job_name):
         )
     return ("N/A", "N/A", "N/A")
 
-# =================== SAVE DATA ===================
-
 def save_to_time_report(data_list, file_path='Time_report.xlsm', sheet_name='Raw Data'):
-    """Ghi danh sách dữ liệu vào sheet Raw Data của Time_report.xlsm"""
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Không tìm thấy file: {file_path}")
-
-    wb = load_workbook(file_path, keep_vba=True)
-    
-    if sheet_name not in wb.sheetnames:
-        raise ValueError(f"Không tìm thấy sheet: {sheet_name}")
-
-    ws = wb[sheet_name]
-
-    # Tìm dòng trống đầu tiên
-    first_empty_row = ws.max_row + 1
-    if all([cell.value is None for cell in ws[first_empty_row - 1]]):
-        first_empty_row -= 1
-
-    # Cột theo đúng thứ tự định dạng
+    """Ghi danh sách dữ liệu vào sheet Raw Data của Time_report.xlsm, tự tạo nếu chưa có"""
     columns = [
         "Date", "Project Name", "Project Code", "Job Name", "Job Code",
         "Employee", "Employee ID", "Team", "Workcenter", "Task", "Hours"
     ]
 
+    # 1. Tạo file nếu chưa tồn tại
+    if not os.path.exists(file_path):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = sheet_name
+        # Ghi header
+        for col_idx, col_name in enumerate(columns, start=1):
+            ws.cell(row=1, column=col_idx, value=col_name)
+        wb.save(file_path)
+
+    # 2. Mở workbook có hỗ trợ VBA
+    wb = load_workbook(file_path, keep_vba=True)
+    
+    # 3. Tạo sheet nếu chưa có
+    if sheet_name not in wb.sheetnames:
+        ws = wb.create_sheet(title=sheet_name)
+        for col_idx, col_name in enumerate(columns, start=1):
+            ws.cell(row=1, column=col_idx, value=col_name)
+    else:
+        ws = wb[sheet_name]
+
+    # 4. Tìm dòng trống đầu tiên
+    first_empty_row = ws.max_row + 1
+    if all([cell.value is None for cell in ws[first_empty_row - 1]]):
+        first_empty_row -= 1
+
+    # 5. Ghi dữ liệu
     for entry in data_list:
         for col_idx, col_name in enumerate(columns, start=1):
             value = entry.get(col_name, "")
             ws.cell(row=first_empty_row, column=col_idx, value=value)
         first_empty_row += 1
 
+    # 6. Lưu file
     wb.save(file_path)
     return file_path
